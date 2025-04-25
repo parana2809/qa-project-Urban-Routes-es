@@ -2,9 +2,10 @@ import data
 from selenium import webdriver
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
 # no modificar
 def retrieve_phone_code(driver) -> str:
@@ -37,15 +38,25 @@ def retrieve_phone_code(driver) -> str:
 class UrbanRoutesPage:
     from_field = (By.ID, 'from')
     to_field = (By.ID, 'to')
+    call_taxi_button = (By.CSS_SELECTOR, ".button.round")
+    comfort_fare_option = (By.XPATH, '//*[@id="root"]//div[contains(text(), "Comfort")]')
+    phone_number_button = (By.CLASS_NAME, "np-text")
+    phone_number_input = (By.ID, "phone")
 
     def __init__(self, driver):
         self.driver = driver
 
     def set_from(self, from_address):
-        self.driver.find_element(*self.from_field).send_keys(from_address)
+        #self.driver.find_element(*self.from_field).send_keys(from_address)
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located(self.from_field)
+        ).send_keys(from_address)
 
     def set_to(self, to_address):
-        self.driver.find_element(*self.to_field).send_keys(to_address)
+        #self.driver.find_element(*self.to_field).send_keys(to_address)
+        WebDriverWait(self.driver, 5).until(
+           EC.presence_of_element_located(self.to_field)
+        ).send_keys(to_address)
 
     def get_from(self):
         return self.driver.find_element(*self.from_field).get_property('value')
@@ -53,7 +64,25 @@ class UrbanRoutesPage:
     def get_to(self):
         return self.driver.find_element(*self.to_field).get_property('value')
 
+    def set_route(self, from_address, to_address):
+        self.set_from(from_address)
+        self.set_to(to_address)
 
+    def get_call_taxi_button(self):
+        return WebDriverWait(self.driver, 5). until(
+            EC. element_to_be_clickable(self.call_taxi_button)
+        )
+
+    def click_call_taxi_button(self):
+        self.get_call_taxi_button().click()
+
+    def get_comfort_fare_option(self):
+        return WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable(self.comfort_fare_option)
+        )
+
+    def click_on_comfort_fare_option(self):
+        self.get_comfort_fare_option().click()
 
 class TestUrbanRoutes:
 
@@ -62,11 +91,12 @@ class TestUrbanRoutes:
     @classmethod
     def setup_class(cls):
         # no lo modifiques, ya que necesitamos un registro adicional habilitado para recuperar el código de confirmación del teléfono
-        from selenium.webdriver import DesiredCapabilities
-        capabilities = DesiredCapabilities.CHROME
-        capabilities["goog:loggingPrefs"] = {'performance': 'ALL'}
-        cls.driver = webdriver.Chrome(desired_capabilities=capabilities)
+        options = Options()
+        options.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
 
+        cls.driver = webdriver.Chrome(service=Service(), options=options)
+
+    # 1. Configurar la dirección o ruta (Desde-Hasta)
     def test_set_route(self):
         self.driver.get(data.urban_routes_url)
         routes_page = UrbanRoutesPage(self.driver)
@@ -76,6 +106,16 @@ class TestUrbanRoutes:
         assert routes_page.get_from() == address_from
         assert routes_page.get_to() == address_to
 
+    # 2. Seleccionar la tarifa Comfort
+    def test_select_comfort_rate(self):
+        self.test_set_route()
+        routes_page = UrbanRoutesPage(self.driver)
+        routes_page.click_call_taxi_button()
+        routes_page.click_on_comfort_fare_option()
+
+        comfort_fare = routes_page.get_comfort_fare_option().text
+        comfort_text = "Comfort"
+        assert comfort_fare in comfort_text
 
     @classmethod
     def teardown_class(cls):
