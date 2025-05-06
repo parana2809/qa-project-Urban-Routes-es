@@ -97,7 +97,6 @@ class UrbanRoutesPage:
         time.sleep(0.5)
 
     def click_payment_method_field(self):
-        # 1. Localizar el elemento con presencia garantizada
         locator = self.locators.payment_method_button
         element = WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable(locator),
@@ -110,7 +109,6 @@ class UrbanRoutesPage:
             self.driver.execute_script("arguments[0].click();", element)
 
     def click_away(self):
-        # Hacemos clic en el fondo de la página (fuera de cualquier campo)
         body = self.driver.find_element("tag name", 'body')
         body.click()
 
